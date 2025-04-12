@@ -1,0 +1,131 @@
+{
+  "shoe_rules": [
+    {
+      "shoe_type": "sneakers",
+      "height": "low",
+      "recommended_socks": ["no-show", "ankle"],
+      "gender": ["male", "female", "kids"],
+      "material": ["cotton", "nylon-blend", "wool"],
+      "season": ["all"],
+      "priority": 1
+    },
+    {
+      "shoe_type": "sneakers",
+      "height": "high",
+      "recommended_socks": ["crew", "knee-high"],
+      "gender": ["male", "female"],
+      "material": ["cotton", "wool", "synthetic-blend"],
+      "season": ["winter", "spring"],
+      "priority": 2
+    },
+    {
+      "shoe_type": "boots",
+      "height": "high",
+      "recommended_socks": ["crew", "knee-high"],
+      "gender": ["male", "female"],
+      "material": ["wool", "synthetic-blend"],
+      "season": ["fall", "winter"],
+      "priority": 3
+    }
+  ],
+  "color_rules": [
+    {
+      "primary": "black",
+      "secondary": ["white", "gray", "red", "blue", "yellow"],
+      "accent": ["silver", "gold", "metallic"],
+      "recommended_colors": ["black", "dark gray", "white", "beige", "red"],
+      "patterns": ["solid", "micro-texture", "geometric"],
+      "priority": 1
+    },
+    {
+      "primary": "red",
+      "secondary": ["black", "white", "gray", "blue"],
+      "accent": ["gold", "silver", "metallic"],
+      "recommended_colors": ["black", "gray", "white", "beige", "navy blue"],
+      "patterns": ["geometric", "solid", "plaid"],
+      "priority": 2
+    },
+    {
+      "primary": "blue",
+      "secondary": ["black", "white", "gray", "red"],
+      "accent": ["silver", "gold", "metallic"],
+      "recommended_colors": ["navy", "gray", "white", "light blue"],
+      "patterns": ["solid", "stripes", "tonal"],
+      "priority": 2
+    },
+    {
+      "primary": "green",
+      "secondary": ["black", "white", "gray", "brown"],
+      "accent": ["gold", "silver", "metallic"],
+      "recommended_colors": ["dark green", "olive", "gray", "beige"],
+      "patterns": ["solid", "plaid", "camouflage"],
+      "priority": 3
+    },
+    {
+      "primary": "yellow",
+      "secondary": ["black", "gray", "white", "green"],
+      "accent": ["silver", "gold", "metallic"],
+      "recommended_colors": ["gray", "black", "white", "blue"],
+      "patterns": ["contrast", "geometric"],
+      "priority": 3
+    },
+    {
+      "primary": "brown",
+      "secondary": ["black", "white", "gray", "beige"],
+      "accent": ["gold", "copper", "metallic"],
+      "recommended_colors": ["brown", "gray", "beige", "olive"],
+      "patterns": ["solid", "plaid", "geometric"],
+      "priority": 4
+    },
+    {
+      "primary": "white",
+      "secondary": ["black", "gray", "beige", "brown"],
+      "accent": ["gold", "copper", "metallic"],
+      "recommended_colors": ["white", "gray", "beige", "silver"],
+      "patterns": ["solid", "plaid", "geometric"],
+      "priority": 5
+    }
+  ],
+  "design_rules": [
+    {
+      "design": "striped",
+      "recommended_patterns": ["solid", "tonal"],
+      "material": ["cotton-blend"],
+      "priority": 2
+    },
+    {
+      "design": "camouflage",
+      "recommended_patterns": ["solid", "geometric"],
+      "material": ["nylon", "polyester-blend"],
+      "priority": 3
+    }
+  ],
+  "special_combinations": [
+    {
+      "name": "classic_black_white",
+      "colors": ["black", "white"],
+      "design": "any",
+      "recommendations": {
+        "sock_colors": ["black", "white"],
+        "patterns": ["contrast", "geometric"],
+        "material": "cotton"
+      }
+    },
+    {
+      "name": "vibrant_red_blue",
+      "colors": ["red", "blue"],
+      "design": "geometric",
+      "recommendations": {
+        "sock_colors": ["black", "gray", "blue"],
+        "patterns": ["geometric", "solid"],
+        "material": "nylon-blend"
+      }
+    }
+  ],
+  "fallback": {
+    "sock_types": ["crew", "ankle"],
+    "colors": ["neutral"],
+    "patterns": ["solid"],
+    "material": "cotton-blend"
+  }
+}
