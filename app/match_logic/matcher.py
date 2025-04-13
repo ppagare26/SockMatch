@@ -10,22 +10,13 @@ from .match_socks_rule import StyleMatcher, ShoeAttributes
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def load_openai_key() -> str:
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    key_path = os.path.abspath(os.path.join(base_dir, '..', '..', 'config', 'gptKey.txt'))
-
-    if not os.path.exists(key_path):
-        raise FileNotFoundError(f"OpenAI API key file not found at {key_path}")
-
-    with open(key_path, 'r', encoding='utf-8') as file:
-        return file.read().strip()
 
 
 class SockRecommender:
     def __init__(self):
         self.matcher = StyleMatcher()
-        api_key = load_openai_key()
-        self.client = OpenAI(api_key=api_key)
+        api_key =""
+        self.client = None
 
     def gpt_refine(self, context: Dict) -> Dict:
         prompt = f"""
