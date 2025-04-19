@@ -1,67 +1,89 @@
-import os
-import json
+
 import logging
-from typing import Dict
-from openai import OpenAI
+from typing import Optional, Dict
 
 from .image_preprocessing import detect_and_process_shoe, extract_shoe_attributes
-from .match_socks_rule import StyleMatcher, ShoeAttributes
+from .match_socks_rule import StyleMatcher, ShoeAttributes, AttributeWithConfidence
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+# Define the data classes for attributes and shoe
+
+
+
+def safe_label(predicted: Dict, attr: str) -> Optional[AttributeWithConfidence]:
+    """
+    Safely extract model-predicted structured labels with their confidence.
+    Only return values with confidence > 60%.
+    """
+    label_info = predicted.get(attr, {})
+    label = label_info.get("label", "").strip()
+    confidence = label_info.get("confidence", "0")
+
+    try:
+        confidence = float(confidence)  # Convert confidence to float
+    except ValueError:
+        confidence = 0.0  # In case confidence is not a valid number
+
+    if confidence >= 60 and label.lower() != 'nan':
+        return AttributeWithConfidence(label=label, confidence=confidence)
+    return None
+
 
 class SockRecommender:
     def __init__(self):
         self.matcher = StyleMatcher()
-        api_key =""
-        self.client = None
+        # api_key = ""  # Optional: Add your OpenAI API key if you plan to use gpt_refine
+        # self.client = OpenAI(api_key=api_key) if api_key else None
 
-    def gpt_refine(self, context: Dict) -> Dict:
-        prompt = f"""
-        You are a fashion expert helping match socks to shoes.
-
-        Shoe:
-        - Type: {context['shoe_analysis']['type']}
-        - Height: {context['shoe_analysis']['height']}
-        - Primary color: {context['shoe_analysis']['primary_color']}
-        - Accent color: {context['shoe_analysis'].get('accent_color')}
-        - Secondary color: {context['shoe_analysis'].get('secondary_color')}
-        - Design: {context['shoe_analysis']['design']}
-        - Season: {context['metadata']['season']}
-        - Gender: {context.get('gender', 'unisex')}
-
-        Initial sock recommendation:
-        - Types: {context['recommendations']['types']}
-        - Colors: {context['recommendations']['colors']}
-        - Patterns: {context['recommendations']['patterns']}
-        - Materials: {context['recommendations']['materials']}
-
-        Please:
-        1. Refine the sock recommendation (keep it realistic)
-        2. Add a fashion-forward style tip
-        3. Keep it concise and return a JSON like:
-        {{
-            "refined_types": [...],
-            "refined_colors": [...],
-            "refined_patterns": [...],
-            "refined_materials": [...],
-            "style_tip": "..."
-        }}
-        """
-
-        response = self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
-        )
-
-        content = response.choices[0].message.content
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            return eval(content)
+    # def gpt_refine(self, context: Dict) -> Dict:
+    #     if not self.client:
+    #         logger.warning("OpenAI client is not initialized. Skipping GPT refinement.")
+    #         return {}
+    #
+    #     prompt = f"""
+    #     You are a fashion expert helping match socks to shoes.
+    #
+    #     Shoe:
+    #     - Type: {context['shoe_analysis']['category']}
+    #     - Height: {context['shoe_analysis']['height']}
+    #     - Primary color: {context['shoe_analysis']['primary_color']}
+    #     - Accent color: {context['shoe_analysis'].get('accent_color')}
+    #     - Secondary color: {context['shoe_analysis'].get('secondary_color')}
+    #     - Design: {context['shoe_analysis']['design']}
+    #     - Season: {context['metadata']['season']}
+    #     - Gender: {context.get('gender', 'unisex')}
+    #
+    #     Initial sock recommendation:
+    #     - Types: {context['recommendations']['types']}
+    #     - Colors: {context['recommendations']['colors']}
+    #     - Patterns: {context['recommendations']['patterns']}
+    #     - Materials: {context['recommendations']['materials']}
+    #
+    #     Please:
+    #     1. Refine the sock recommendation (keep it realistic).
+    #     2. Add a fashion-forward style tip.
+    #     3. Return a JSON object:
+    #     {{
+    #         "refined_types": [...],
+    #         "refined_colors": [...],
+    #         "refined_patterns": [...],
+    #         "refined_materials": [...],
+    #         "style_tip": "..."
+    #     }}
+    #     """
+    #     response = self.client.chat.completions.create(
+    #         model="gpt-3.5-turbo",
+    #         messages=[{"role": "user", "content": prompt}],
+    #         temperature=0.7
+    #     )
+    #     content = response.choices[0].message.content
+    #     try:
+    #         return json.loads(content)
+    #     except json.JSONDecodeError:
+    #         return eval(content)
 
     def match_socks(self, image_path: str, gender: str = "unisex") -> Dict:
         try:
@@ -71,15 +93,33 @@ class SockRecommender:
             if attributes.get("error"):
                 raise ValueError(attributes["error"])
 
+            predicted = attributes.get("model_properties", {})
+            ai_attributes = {
+                "category": safe_label(predicted, 'Category'),
+                "sub_category": safe_label(predicted, 'SubCategory'),
+                "gender_predicted": safe_label(predicted, 'Gender'),
+                "material": safe_label(predicted, 'Material'),
+                "closure": safe_label(predicted, 'Closure'),
+                "toe_style": safe_label(predicted, 'ToeStyle'),
+                "heel_height": safe_label(predicted, 'HeelHeight'),
+                "insole": safe_label(predicted, 'Insole')
+            }
+
+            # Process colors
             colors = [c.lower() for c in attributes.get("colors", [])]
+
+            # Build the ShoeAttributes object
             shoe_attrs = ShoeAttributes(
-                shoe_type=attributes.get("type", "generic").lower(),
                 height=attributes.get("height", "low").lower(),
                 colors=colors,
                 design=attributes.get("design", "solid").lower(),
-                gender=gender.lower()
+                gender=ai_attributes["gender_predicted"].label.lower() if ai_attributes[
+                    "gender_predicted"] else gender.lower(),
+                category=ai_attributes["category"],
+                sub_category=ai_attributes["sub_category"]
             )
 
+            # Match socks
             recommendations = self.matcher.match(shoe_attrs)
 
             primary_color = colors[0] if colors else "neutral"
@@ -88,7 +128,9 @@ class SockRecommender:
 
             base_response = {
                 "shoe_analysis": {
-                    "type": shoe_attrs.shoe_type,
+                    "category": shoe_attrs.category.label if shoe_attrs.category else "unknown",
+                    "sub_category": shoe_attrs.sub_category.label if shoe_attrs.sub_category else "unknown",
+                    "gender": shoe_attrs.gender,
                     "height": shoe_attrs.height,
                     "primary_color": primary_color,
                     "accent_color": accent_color,
@@ -110,13 +152,12 @@ class SockRecommender:
                     "special_combo_match": recommendations.get("special_combo_match"),
                     "fallback_used": recommendations.get("fallback_used", False)
                 },
-                "error": None,
-                "style_tip": None,
-                "gender": gender
+                "style_tip": recommendations.get("style_tip"),
+                "error": None
             }
 
+            # Uncomment this block to enable GPT-based fine-tuning
             # gpt_refinement = self.gpt_refine(base_response)
-            #
             # base_response["recommendations"] = {
             #     "types": gpt_refinement["refined_types"],
             #     "colors": gpt_refinement["refined_colors"],
@@ -138,5 +179,6 @@ class SockRecommender:
                     "fallback_used": True
                 },
                 "style_tip": None,
+                "gender": gender,
                 "error": str(e)
             }

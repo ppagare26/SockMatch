@@ -8,11 +8,19 @@ import os
 from ultralytics import YOLO
 from PIL import Image
 from rembg import remove
+from .shoe_model_prediction import predict_model_properties
+
+
+
 
 # Initialize YOLO model (keep your existing model loading code)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 yolo_model_path = os.path.abspath(os.path.join(script_dir, "..", "..", "model", "model.pt"))
 yolo_model = YOLO(yolo_model_path)
+
+# Initialize the model path
+best_model_path = os.path.abspath(os.path.join(script_dir, "..", "..", "model", "best_shoe_model.pth"))
+
 
 
 def detect_and_process_shoe(image_path: str, confidence_threshold: float = 0.5) -> Optional[np.ndarray]:
@@ -65,7 +73,7 @@ def extract_shoe_attributes(rgba_array: np.ndarray, num_colors: int = 3) -> Dict
     }
 
     try:
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        with ThreadPoolExecutor(max_workers=4) as executor:
             # Submit all analysis tasks in parallel
             color_future = executor.submit(
                 extract_colors,
@@ -81,10 +89,16 @@ def extract_shoe_attributes(rgba_array: np.ndarray, num_colors: int = 3) -> Dict
                 rgba_array
             )
 
+            model_future = executor.submit(predict_model_properties, rgba_array)
+
             # Get results
             result["colors"] = color_future.result()
             result["height"] = height_future.result()
             result["design"] = design_future.result()
+            # Only include model properties that meet confidence threshold
+            model_props = model_future.result()
+            if model_props:
+                result["model_properties"] = model_props
 
     except Exception as e:
         result["error"] = str(e)
